@@ -40,7 +40,10 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     this.serviceName = configService.get('serviceName') || 'unknown'
     this.config.retries = this.config.retries || 0
     this.config.emitters = this.config.emitters || {}
-    this.config.consumer.delay = this.config.consumer?.delay || 90000
+    if (!this.config.consumer) {
+      this.config.consumer = { delay: 90000 }
+    }
+    this.config.consumer.delay = this.config.consumer.delay || 90000
   }
 
   async createTopicEmitter<T>(config: { topic: string; emitterName: string }): Promise<MessageEmitter<T>> {
