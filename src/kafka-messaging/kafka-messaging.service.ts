@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ContextInfo, ContextService } from '@nest-me-up/common/dist/context'
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -19,7 +20,8 @@ interface KafkaMessagingConfig {
 @Injectable()
 export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>, OnApplicationBootstrap {
   private readonly consumers: Record<string, KafkaConsumer> = {}
-  private readonly emitters: Record<string, MessageEmitter[]> = {}
+  //TODO use ZodSchema to validate the message
+  private readonly emitters: Record<string, MessageEmitter<any>[]> = {}
   private readonly config: KafkaMessagingConfig
   private readonly serviceName
   private onApplicationBootstrapDone: boolean = false
@@ -41,14 +43,14 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     this.config.consumer.delay = this.config.consumer?.delay || 90000
   }
 
-  async createTopicEmitter(config: { topic: string; emitterName: string }): Promise<MessageEmitter> {
+  async createTopicEmitter<T>(config: { topic: string; emitterName: string }): Promise<MessageEmitter<T>> {
     if (this.hasEmitterWithName(config.emitterName)) {
       throw Error(`Emitter with name ${config.emitterName} already exists`)
     }
     this.logger.info('Registering topic emitter on topic: %s', config.topic)
     const retryTopicName = this.getRetryTopicName(config.topic, config.emitterName)
     const retries = this.config.emitters[config.emitterName]?.retries || this.config.retries
-    const emitter = new MessageEmitter(config.emitterName, config.topic, retries)
+    const emitter = new MessageEmitter<T>(config.emitterName, config.topic, retries)
     this.cacheEmitter({ topic: config.topic, emitter })
     this.cacheEmitter({ topic: retryTopicName, emitter })
 
@@ -62,7 +64,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     return Object.values(this.emitters).some((emitterArray) => emitterArray.some((emitter) => emitter.name === name))
   }
 
-  private cacheEmitter({ topic, emitter }: { topic: string; emitter: MessageEmitter }) {
+  private cacheEmitter({ topic, emitter }: { topic: string; emitter: MessageEmitter<any> }) {
     if (!this.emitters[topic]) {
       this.emitters[topic] = []
     }
@@ -130,7 +132,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     topic: string
     heartbeat: () => Promise<void>
   }): Promise<boolean> {
-    const emitters: MessageEmitter[] = this.emitters[topic]
+    const emitters: MessageEmitter<any>[] = this.emitters[topic]
     if (emitters) {
       this.logger.debug(
         `Emitters for topic %s: %o`,
@@ -151,7 +153,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     heartbeat,
     topic,
   }: {
-    emitter: MessageEmitter
+    emitter: MessageEmitter<any>
     messageData: MessageData
     metadata: KafkaMessageMetadata
     heartbeat: () => Promise<void>
@@ -198,7 +200,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     return true
   }
 
-  private async handleDeadLetter(error: unknown, messageData: MessageData, emitter: MessageEmitter) {
+  private async handleDeadLetter(error: unknown, messageData: MessageData, emitter: MessageEmitter<any>) {
     const dlqTopic = `${emitter.topic}-${this.serviceName}-${emitter.name}-dlq`
     this.logger.error(
       error,
@@ -213,7 +215,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     return this.kafkaClient.sendMessages({ messages: [messageData], topic: dlqTopic })
   }
 
-  private async handleRetry(error: unknown, message: MessageData, emitter: MessageEmitter) {
+  private async handleRetry(error: unknown, message: MessageData, emitter: MessageEmitter<any>) {
     const retryTopic = this.getRetryTopicName(emitter.topic, emitter.name)
     this.logger.info(
       error,

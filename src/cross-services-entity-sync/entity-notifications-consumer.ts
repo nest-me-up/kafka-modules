@@ -1,29 +1,24 @@
 import { Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { InjectDataSource } from '@nestjs/typeorm'
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import { DataSource } from 'typeorm'
-import { v4 } from 'uuid'
-import { ContextInfo, ContextService, DataMessage, KafkaEmitterService, MessageKind } from '../'
+import { DataSource, EntityTarget } from 'typeorm'
+import { ColumnMetadata } from 'typeorm/metadata/ColumnMetadata.js'
+import { KafkaMessagingService } from '../kafka-messaging'
 import { SYNC_RUNNING_INDEX_COLUMN } from './cross-services-entity-sync.module'
 import { checkSchemaDependencies } from './entity-notifications.utils'
+import { EntityEventMessage, MessageKind } from './message.dto'
 
 @Injectable()
 export class EntityNotificationsConsumer {
   private readonly registeredEntitiesToColumns: Record<string, string[]> = {}
-  private readonly notificationListeners: Map<string, ((message: DataMessage) => Promise<void>)[]> = new Map()
-  private readonly serviceName: string
+  private readonly notificationListeners: Map<string, ((message: EntityEventMessage) => Promise<void>)[]> = new Map()
   constructor(
-    private readonly kafkaEmitterService: KafkaEmitterService,
+    private readonly kafkaMessagingService: KafkaMessagingService,
     @InjectPinoLogger(EntityNotificationsConsumer.name)
     private readonly logger: PinoLogger,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly configService: ConfigService,
-    private readonly contextService: ContextService,
-  ) {
-    this.serviceName = this.configService.get<string>('serviceName')
-  }
+  ) {}
 
   private connection() {
     return this.dataSource.manager.connection
@@ -37,8 +32,8 @@ export class EntityNotificationsConsumer {
     entityClass,
     listener,
   }: {
-    entityClass: any
-    listener: (message: DataMessage) => Promise<void>
+    entityClass: EntityTarget<unknown>
+    listener: (message: EntityEventMessage) => Promise<void>
   }) {
     const entityMetadata = this.connection().getMetadata(entityClass)
     const entityName = entityMetadata.name
@@ -50,14 +45,14 @@ export class EntityNotificationsConsumer {
     listeners.push(listener)
   }
 
-  async registerEntity(config: { entityClass: any; topic?: string; orginServiceName?: string }) {
+  async registerEntity(config: { entityClass: EntityTarget<unknown>; topic?: string; orginServiceName?: string }) {
     if (!config.topic && !config.orginServiceName) {
       throw new Error('either topic or orginServiceName must be provided')
     }
     const entityMetadata = this.connection().getMetadata(config.entityClass)
     const entityName = entityMetadata.name
     const tableName = entityMetadata.tableName
-    const columns = entityMetadata.ownColumns.map((c) => c.propertyName)
+    const columns = entityMetadata.ownColumns.map((c: ColumnMetadata) => c.propertyName)
     const topic = config.topic || `DBSYNC_${config.orginServiceName}__${entityName}`
     await checkSchemaDependencies(tableName, this.manager(), this.logger)
     this.logger.info(
@@ -67,23 +62,19 @@ export class EntityNotificationsConsumer {
       topic,
     )
     this.registeredEntitiesToColumns[entityName] = columns
-    const emitter = await this.kafkaEmitterService.createTopicEmitter({ topic, emitterName: topic })
-    emitter.on(async (message) => await this.handleNotification(message))
+    const emitter = await this.kafkaMessagingService.createTopicEmitter<EntityEventMessage>({
+      topic,
+      emitterName: topic,
+    })
+    emitter.on(async (messageData) => await this.handleNotification(messageData))
   }
 
-  private async handleNotification(message: DataMessage): Promise<void> {
-    const entityName = message.name
-    await this.contextService.runWithContext(
-      {
-        tenantId: message?.payload['tenant_id'],
-        transactionId: v4(),
-      } as ContextInfo,
-      async () => {
-        await this._handleNotification(message, entityName)
-      },
-    )
+  private async handleNotification({ message }: { message: EntityEventMessage }): Promise<void> {
+    const entityName = message.entityName
+    await this._handleNotification(message, entityName)
   }
-  private async _handleNotification(message: DataMessage, entityName: string) {
+
+  private async _handleNotification(message: EntityEventMessage, entityName: string) {
     try {
       if (!this.registeredEntitiesToColumns[entityName]) {
         this.logger.error('entity %s is not registered', entityName)
@@ -183,7 +174,7 @@ export class EntityNotificationsConsumer {
     }
   }
 
-  private filteredEntity(entity, entityColumns: string[]) {
+  private filteredEntity(entity: Record<string, unknown>, entityColumns: string[]) {
     return Object.fromEntries(Object.entries(entity).filter(([key]) => entityColumns.includes(key)))
   }
 }

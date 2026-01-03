@@ -1,6 +1,6 @@
 {
   "name": "@nest-me-up/kafka-modules",
-  "version": "0.0.1",
+  "version": "0.0.1-itai1",
   "description": "Library for common NestJs components for Web or Micro Services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,15 +24,20 @@
     "test:component": "service_config='src/utils/config/test.yml' jest --config test/component/config/jest-component-test.json --runInBand --forceExit --detectOpenHandles",
     "test:component-ci": "service_config='src/utils/config/ci.yml' jest --config test/component/config/jest-component-test.json --runInBand --forceExit"
   },
+  "dependencies": {},
   "peerDependencies": {
     "@nest-me-up/common": ">=1.0.0",
     "kafkajs": ">=2.0.0",
-    "uuid": ">=9.0.0 <12.0.0"
+    "uuid": ">=9.0.0 <12.0.0",
+    "typeorm": ">=0.3.0",
+    "@nestjs/typeorm": "^10.0.0"
   },
   "devDependencies": {
     "@nest-me-up/common": "^1.0.13",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.3",
+    "typeorm": "^0.3.28",
+    "@nestjs/typeorm": "^11.0.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
