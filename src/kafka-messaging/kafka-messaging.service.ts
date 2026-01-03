@@ -37,7 +37,10 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
     if (!this.config) {
       throw new Error('Missing kafka in configuration')
     }
-    this.serviceName = configService.get('serviceName') || 'unknown'
+    this.serviceName = configService.get<string>('serviceName')
+    if (!this.serviceName) {
+      throw new Error('Missing serviceName in configuration')
+    }
     this.config.retries = this.config.retries || 0
     this.config.emitters = this.config.emitters || {}
     if (!this.config.consumer) {
@@ -233,7 +236,7 @@ export class KafkaMessagingService implements KafkaConsumerHandler<MessageData>,
   }
 
   private getRetryTopicName(topic: string, emitterName: string) {
-    return `${topic}-${this.serviceName}-${emitterName}`
+    return `${topic}-${this.serviceName}-${emitterName}-retry`
   }
 
   async onApplicationBootstrap() {
