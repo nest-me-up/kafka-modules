@@ -1,5 +1,5 @@
 {
-  "name": "@nest-me-up/<your package name>",
+  "name": "@nest-me-up/kafka-modules",
   "version": "0.0.1",
   "description": "Library for common NestJs components for Web or Micro Services",
   "main": "dist/index.js",
@@ -8,9 +8,9 @@
   "author": "ItaiH",
   "license": "MIT",
   "repository": {
-    "name": "<your package name>",
+    "name": "kafka-modules",
     "type": "git",
-    "url": "https://github.com/nest-me-up/<your package name>.git"
+    "url": "https://github.com/nest-me-up/kafka-modules.git"
   },
   "scripts": {
     "prepublishOnly": "npm run build",
@@ -24,18 +24,26 @@
     "test:component": "service_config='src/utils/config/test.yml' jest --config test/component/config/jest-component-test.json --runInBand --forceExit --detectOpenHandles",
     "test:component-ci": "service_config='src/utils/config/ci.yml' jest --config test/component/config/jest-component-test.json --runInBand --forceExit"
   },
+  "peerDependencies": {
+    "@nest-me-up/common": ">=1.0.0",
+    "kafkajs": ">=2.0.0",
+    "uuid": ">=9.0.0 <12.0.0"
+  },
   "devDependencies": {
+    "@nest-me-up/common": "^1.0.13",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.3",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
+    "kafkajs": "^2.2.4",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.1"
+    "typescript-eslint": "^8.50.1",
+    "uuid": "^11.1.0"
   },
   "files": [
     "dist",

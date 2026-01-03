@@ -1,0 +1,6 @@
+export type { KafkaMessageMetadata } from '../kafka-client/kafka-client.interface'
+export { KafkaConsumer } from '../kafka-client/kafka-consumer'
+export { KafkaMessagingModule } from './kafka-messaging.module'
+export { KafkaMessagingService } from './kafka-messaging.service'
+export { MessageEmitter as AsyncDataEmitter, MessageEmitter } from './message-emitter'
+export { createMockKafkaMessaging } from './mock-emitter'
