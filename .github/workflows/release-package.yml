@@ -1,0 +1,18 @@
+name: release github actions
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    uses: nest-me-up/github_actions/.github/workflows/release_lib.yml@main
+    secrets:
+      WORKFLOW_ACTION_TOKEN: ${{ secrets.WORKFLOW_ACTION_TOKEN }}
+      MONITORING_SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}

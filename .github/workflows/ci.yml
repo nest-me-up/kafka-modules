@@ -1,0 +1,13 @@
+name: build github actions
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+
+jobs:
+  ci:
+    uses: nest-me-up/github_actions/.github/workflows/build_node.yml@main
+    secrets:
+      WORKFLOW_ACTION_TOKEN: ${{ secrets.WORKFLOW_ACTION_TOKEN }}
+      MONITORING_SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}

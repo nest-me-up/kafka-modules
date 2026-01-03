@@ -1,0 +1,14 @@
+name: component test
+on:
+  pull_request:
+jobs:
+  component-test:
+    uses: nest-me-up/github_actions/.github/workflows/node_component_test.yml@main
+    with:
+      db: false
+      kafka: false
+      redis: false
+      gogs: true
+    secrets:
+      WORKFLOW_ACTION_TOKEN: ${{ secrets.WORKFLOW_ACTION_TOKEN }}
+      ACTION_MONITORING_SLACK: ${{ secrets.ACTION_MONITORING_SLACK }}
